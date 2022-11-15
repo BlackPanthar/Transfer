@@ -1,10 +1,8 @@
-use core::f32;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Addr};
-//use cosmwasm_std::Coin;
-//use cosmwasm_std::{Coin, CosmosMsg, Empty};
-//use cosmwasm_std::Addr;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use cw_utils::Expiration;
 
 use crate::{state::State};
@@ -45,9 +43,13 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 
 pub type ConfigResponse = State;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OwnerResponse {
     pub owner: Addr,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BalanceResponse {
     pub balance: Option<Vec<Coin>>, 
 }

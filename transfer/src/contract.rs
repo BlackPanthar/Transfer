@@ -22,9 +22,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     if msg.expiration <= cw_utils::Expiration::AtHeight(_env.block.height) {
-        return Err(ContractError::Unauthorized  {
-          
-        });
+        return Err(ContractError::Unauthorized  {});
       }
 
     let state = State {
@@ -50,10 +48,7 @@ pub fn instantiate(
 }
 
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn execute(
-    deps: DepsMut,
-    _env: Env,
+#[cfg_attr(not(feature = "library"), {sentCoins:f32,beneficiary1:Addr,beneficiary2:Addr, amount }
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -61,8 +56,7 @@ pub fn execute(
         ExecuteMsg::SendCoins { sentCoins: f32 , beneficiary1: Addr, beneficiary2: Addr} => execute::send_coins(deps, sentCoins, beneficiary1, beneficiary2 ),
         ExecuteMsg::WithdrawCoins { fromAccount: String, quantity: Vec<Coin>} => execute::withdraw_coins(deps, _env, info, fromAccount, quantity),
 
-        //quantity: Vec<Coin>, withdrawer_1: Addr, withdrawer_2: Addr,
-        //withdrawFrom: Addr , quantity : Vec<Coin>,
+       
     }
 }
 
@@ -85,9 +79,13 @@ pub mod execute {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
             if info.sender != state.owner {
                 return Err(ContractError::Unauthorized {});
+                
             }
-            state.count = count;
-            Ok(state)
+
+        
+            //state.count = count;
+            //Ok(state)
+            Ok(Response::new().add_attribute("action", "withdraw_coins"))
         })?;
         Ok(Response::new().add_attribute("action", "reset"))
     }
@@ -98,14 +96,14 @@ pub mod execute {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg, account: Option<Addr>) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetOwner {} => to_binary(&query::owner(deps)?),
-        QueryMsg::GetBalance { account} => to_binary(&query::balance(deps, account)?),
-    }
+        QueryMsg::GetOwner{}=>to_binary(&query::owner(deps)?),
+        QueryMsg::GetBalance{account}=>to_binary(&query::balance(deps,Some(account))?),
+        QueryMsg::GetStateResponse {  } => to_binary(&query::state(deps)?), }
 }
 
 pub mod query {
 
-    use crate::msg::{OwnerResponse, BalanceResponse};
+    use crate::msg::{OwnerResponse, BalanceResponse, ConfigResponse};
 
     use super::*;
 
@@ -126,6 +124,10 @@ pub mod query {
          } else{
             Ok(BalanceResponse { balance: None,})
          }
+    }
+    pub fn state(deps: Deps) -> StdResult<ConfigResponse> {
+        let state = STATE.load(deps.storage)?;
+        Ok(state)
     }
 }
 
@@ -172,13 +174,13 @@ mod tests {
 
         // beneficiary can release it
         //let info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::SendCoins { amount: (info.funds), beneficiary1: (info1.sender), beneficiary2: (info2.sender) } ;
+        let msg = ExecuteMsg::SendCoins { amount: (Some(info.funds)), beneficiary1: (info1.sender), beneficiary2: (info2.sender) } ;
         let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // should increase counter by 1
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetBalance { account: () } {}).unwrap();
-        let value: BalaneResponse = from_binary(&res).unwrap();
-        assert_eq!(1, value.balance);
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetBalance { account: info.sender } , Some(info1.sender)).unwrap();
+        let value: crate::msg::BalanceResponse = from_binary(&res).unwrap();
+        assert_eq!(Some(info.funds), value.balance);
     }
 
     #[test]
@@ -191,7 +193,7 @@ mod tests {
         let info2 = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        // beneficiary can release it
+        // withdraw coins then check balance
         let unauth_info = mock_info("anyone", &coins(2, "token"));
         let msg = ExecuteMsg::WithdrawCoins { account: (info.sender), quantity: (Some(info.funds)) };
         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
@@ -202,12 +204,12 @@ mod tests {
 
         // only the original creator can reset the counter
         let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::Reset { count: 5 };
+        let msg = ExecuteMsg::WithdrawCoins { account: (auth_info.sender), quantity: (Some(auth_info.funds)) } ;
         let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         // should now be 5
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: GetCountResponse = from_binary(&res).unwrap();
-        assert_eq!(5, value.count);
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetBalance { account: (auth_info.sender) }, Some(info2.sender) ).unwrap();
+        let value: crate::msg::BalanceResponse = from_binary(&res).unwrap();
+        assert_eq!(Some(auth_info.funds), value.balance);
     }
 }
