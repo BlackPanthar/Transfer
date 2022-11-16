@@ -1,14 +1,11 @@
-
-
-use core::f32;
-
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
+use cosmwasm_std::{to_binary, entry_point, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
 use cw2::set_contract_version;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{State, STATE};
+use cosmwasm_std::StdError;
+//use core::f32;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:transfer";
@@ -22,17 +19,18 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     if msg.expiration <= cw_utils::Expiration::AtHeight(_env.block.height) {
-        return Err(ContractError::Unauthorized  {});
+        //return Err(ContractError::Unauthorized  {});
+        return Err(ContractError::Std(StdError::generic_err("Cannot create expired contract")));
       }
 
     let state = State {
-        owner: info.sender.clone(),
-        source: None,
-        sent_coins: None,
-        beneficiary_1:  None,
-        beneficiary_2: None,
-        beneficiary1_balance: None,
-        beneficiary2_balance: None, 
+        owner: info.sender.clone(), 
+        source: "".to_string(),
+        sent_coins: 0,
+        beneficiary_1:  "".to_string(),
+        beneficiary_2: "".to_string(),
+        beneficiary1_balance: 0,
+        beneficiary2_balance: 0, 
         expiration: msg.expiration,
 
     };
@@ -43,51 +41,80 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender)
+        .add_attribute("expiration", msg.expiration.to_string())
         
     )
 }
 
 
-#[cfg_attr(not(feature = "library"), {sentCoins:f32,beneficiary1:Addr,beneficiary2:Addr, amount }
+#[cfg_attr(not(feature = "library"), entry_point)]
+//#[cfg_attr(not(feature = "library"), sentCoins:<Option<Vec<Coin>>,beneficiary1:Addr,beneficiary2:Addr, amount )]
+pub fn execute(
+    deps: DepsMut,
+    _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SendCoins { sentCoins: f32 , beneficiary1: Addr, beneficiary2: Addr} => execute::send_coins(deps, sentCoins, beneficiary1, beneficiary2 ),
-        ExecuteMsg::WithdrawCoins { fromAccount: String, quantity: Vec<Coin>} => execute::withdraw_coins(deps, _env, info, fromAccount, quantity),
-
-       
+        ExecuteMsg::SendCoins { 
+            sentCoins, 
+            beneficiary1,
+            beneficiary2} 
+            => execute::send_coins(deps, info, sentCoins, beneficiary1, beneficiary2 ),
+        ExecuteMsg::WithdrawCoins { 
+            fromAccount,
+            toWithdraw} 
+            => execute::withdraw_coins(deps, info, fromAccount, toWithdraw),
     }
 }
 
 pub mod execute {
-    use cosmwasm_std::{Coin};
-
     use super::*;
 
-    pub fn send_coins(deps: DepsMut, sentCoins : f32) -> Result<Response, ContractError> {
+    pub fn send_coins(deps: DepsMut, exec_info: MessageInfo, sentCoins : i32, beneficiary1: String, 
+        beneficiary2: String) -> Result<Response, ContractError> {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-            state.beneficiary1_balance += Vec::<Coin> (sentCoins/2.0);
-            state.beneficiary2_balance += Vec::<Coin> (sentCoins/2.0);
+        
+            state.source = exec_info.sender.clone().to_string();
+            state.sent_coins = sentCoins;
+            state.beneficiary_1 = beneficiary1;
+            state.beneficiary_2 = beneficiary2;
+            
+            state.beneficiary1_balance += sentCoins/2;
+            state.beneficiary2_balance += sentCoins/2;
+
             Ok(state)
         })?;
 
-        Ok(Response::new().add_attribute("action", "send_coins"))
+
+
+        Ok(Response::new().add_attribute("method", "send_coins"))
     }
 
-    pub fn withdraw_coins(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+    pub fn withdraw_coins(deps: DepsMut, info: MessageInfo, fromAccount: String, toWithdraw: i32) 
+    -> Result<Response, ContractError> {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-            if info.sender != state.owner {
-                return Err(ContractError::Unauthorized {});
-                
+            if fromAccount == state.beneficiary_1.to_string() {
+                if state.beneficiary1_balance <= 0{
+                    state.beneficiary_1 = "".to_string();
+                    return Err(ContractError::Std(StdError::generic_err("Withdrawal limit reached")));
+                }
+                state.beneficiary1_balance -= toWithdraw;
             }
+            else if fromAccount == state.beneficiary_2.to_string(){
+                if state.beneficiary2_balance <= 0{
+                    state.beneficiary_2 = "".to_string();
+                    return Err(ContractError::Std(StdError::generic_err("Withdrawal limit reached")));
+                }
+                state.beneficiary2_balance -= toWithdraw;
+            } else{
+                return Err(ContractError::Unauthorized {});
+            }
+            Ok(state)
 
-        
-            //state.count = count;
-            //Ok(state)
-            Ok(Response::new().add_attribute("action", "withdraw_coins"))
         })?;
-        Ok(Response::new().add_attribute("action", "reset"))
+
+        Ok(Response::new().add_attribute("method", "withdraw_coins"))
     }
 }
 
@@ -174,7 +201,7 @@ mod tests {
 
         // beneficiary can release it
         //let info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::SendCoins { amount: (Some(info.funds)), beneficiary1: (info1.sender), beneficiary2: (info2.sender) } ;
+        let msg = ExecuteMsg::SendCoins { sentCoins: (info.funds), beneficiary1: (info1.sender), beneficiary2: (info2.sender) } ;
         let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // should increase counter by 1
@@ -195,7 +222,7 @@ mod tests {
 
         // withdraw coins then check balance
         let unauth_info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::WithdrawCoins { account: (info.sender), quantity: (Some(info.funds)) };
+        let msg = ExecuteMsg::WithdrawCoins { fromAccount: (info.sender), toWithdraw: (Some(info.funds)) };
         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
         match res {
             Err(ContractError::Unauthorized {}) => {}
@@ -204,7 +231,7 @@ mod tests {
 
         // only the original creator can reset the counter
         let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::WithdrawCoins { account: (auth_info.sender), quantity: (Some(auth_info.funds)) } ;
+        let msg = ExecuteMsg::WithdrawCoins { fromAccount: (auth_info.sender), toWithdraw: (Some(auth_info.funds)) } ;
         let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
 
         // should now be 5

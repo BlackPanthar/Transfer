@@ -1,27 +1,24 @@
-
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Addr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cw_utils::Expiration;
-
 use crate::{state::State};
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    //owner comes from the environment/who signed it on the cli on instantation
+    //owner comes from the MessageInfo/who signed it on the cli on instantation
+
     pub expiration: Expiration,
 }
 
+
 #[cw_serde]
 pub enum ExecuteMsg {
-    ///Account can send funds to contract and specify two beneficiary accounts
-    SendCoins {amount: Option<Vec<Coin>>, beneficiary1: Addr, beneficiary2: Addr},
-    /// Beneficiary account can withdraw funds from its balance
-    WithdrawCoins {account: Addr, quantity: Option<Vec<Coin>>}, 
-    //fees collected by SendCoins goes to contract owner
-    //if account balance is zero, remove the account, test for this
-    //if contract expires send each beneficiary account value back to the sending account owner
+    ///SendCoins: Account can send funds to contract and specify two beneficiary accounts
+    /// WithdrawCoins: Beneficiary account can withdraw funds from its balance
+    SendCoins {sentCoins: i32, beneficiary1: String, beneficiary2: String},
+    WithdrawCoins {fromAccount: String, toWithdraw: i32}, 
 }
 
 #[cw_serde]
