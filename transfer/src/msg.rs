@@ -1,4 +1,4 @@
-use cosmwasm_schema::{cw_serde};
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr};
 use cw_utils::Expiration;
 use crate::{state::State};
@@ -20,7 +20,7 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-//#[derive(QueryResponses)]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
    
  //   #[returns(ConfigResponse)]
@@ -28,10 +28,10 @@ pub enum QueryMsg {
 
 
     //GetOwner returns the current owner as a json-encoded string
-    //#[returns(ConfigResponse)]
+    #[returns(ConfigResponse)]
        GetOwner {},
 
-    //#[returns(BalanceResponse)]
+    #[returns(BalanceResponse)]
     GetBalance { from_account : String,},
 }
 
