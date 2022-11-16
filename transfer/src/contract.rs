@@ -121,11 +121,11 @@ pub mod execute {
 
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg, account: Option<Addr>) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg, account: String) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetOwner{}=>to_binary(&query::owner(deps)?),
-        QueryMsg::GetBalance{account}=>to_binary(&query::balance(deps,Some(account))?),
-        QueryMsg::GetStateResponse {  } => to_binary(&query::state(deps)?), }
+        QueryMsg::GetBalance{account}=>to_binary(&query::balance(deps,account)?),
+         }
 }
 
 pub mod query {
@@ -136,26 +136,25 @@ pub mod query {
 
     pub fn owner(deps: Deps) -> StdResult<OwnerResponse> {
         let state = STATE.load(deps.storage)?;
-        Ok(OwnerResponse { owner: state.owner })
+        let _owner = state.owner;
+        Ok(OwnerResponse { owner: _owner ,})
     }
 
-    pub fn balance (deps: Deps, account: Option<Addr>) -> StdResult<BalanceResponse> {
+    pub fn balance (deps: Deps, account: String) -> StdResult<BalanceResponse> {
         let state = STATE.load(deps.storage)?;
-        let balance1 = state.beneficiary1_balance;
-        let balance2 = state.beneficiary2_balance;
 
         if account == state.beneficiary_1{
             Ok(BalanceResponse { balance: state.beneficiary1_balance,})
          } else if account == state.beneficiary_2{
             Ok(BalanceResponse { balance: state.beneficiary2_balance,})
          } else{
-            Ok(BalanceResponse { balance: None,})
+            Ok(BalanceResponse { balance: 0,})
          }
     }
-    pub fn state(deps: Deps) -> StdResult<ConfigResponse> {
+/* *   pub fn state(deps: Deps) -> StdResult<ConfigResponse> {
         let state = STATE.load(deps.storage)?;
         Ok(state)
-    }
+    }*/
 }
 
 

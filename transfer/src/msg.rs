@@ -22,31 +22,31 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-#[derive(QueryResponses)]
+//#[derive(QueryResponses)]
 pub enum QueryMsg {
    
-    #[returns(ConfigResponse)]
-      GetStateResponse {},
+ //   #[returns(ConfigResponse)]
+   //   GetStateResponse {},
 
 
     //GetOwner returns the current owner as a json-encoded string
-    #[returns(ConfigResponse)]
+    //#[returns(ConfigResponse)]
        GetOwner {},
 
-    #[returns(ConfigResponse)]
-    GetBalance { account : Addr,},
+    //#[returns(ConfigResponse)]
+    GetBalance { account : String,},
 }
 
 // We define a custom struct for each query response
 
 pub type ConfigResponse = State;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct OwnerResponse {
     pub owner: Addr,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct BalanceResponse {
-    pub balance: Option<Vec<Coin>>, 
+    pub balance: i32, 
 }
