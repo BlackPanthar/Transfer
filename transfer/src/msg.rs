@@ -1,7 +1,5 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Addr};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_schema::{cw_serde};
+use cosmwasm_std::{Addr};
 use cw_utils::Expiration;
 use crate::{state::State};
 
@@ -17,8 +15,8 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     ///SendCoins: Account can send funds to contract and specify two beneficiary accounts
     /// WithdrawCoins: Beneficiary account can withdraw funds from its balance
-    SendCoins {sentCoins: i32, beneficiary1: String, beneficiary2: String},
-    WithdrawCoins {fromAccount: String, toWithdraw: i32}, 
+    SendCoins {sent_coins: i32, beneficiary1: String, beneficiary2: String},
+    WithdrawCoins {from_account: String, to_withdraw: i32}, 
 }
 
 #[cw_serde]
@@ -33,8 +31,8 @@ pub enum QueryMsg {
     //#[returns(ConfigResponse)]
        GetOwner {},
 
-    //#[returns(ConfigResponse)]
-    GetBalance { account : String,},
+    //#[returns(BalanceResponse)]
+    GetBalance { from_account : String,},
 }
 
 // We define a custom struct for each query response

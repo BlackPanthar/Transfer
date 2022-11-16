@@ -34,7 +34,7 @@ impl CwTemplateContract {
         T: Into<String>,
         CQ: CustomQuery,
     {
-        let msg = QueryMsg::GetBalance {account: self.addr().into()};
+        let msg = QueryMsg::GetBalance {from_account: self.addr().into()};
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
             msg: to_binary(&msg)?,
